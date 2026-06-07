@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.egg-info/
+
+# ML artifacts
+*.pt
+*.pth
+*.onnx
+ml_service/data/*.wav
+ml_service/checkpoints/
+
+# Flutter / Dart
+app/.dart_tool/
+app/.flutter-plugins*
+app/build/
+app/.idea/
+app/ios/Pods/
+
+# OS / editor
+.DS_Store
+.vscode/
+*.log
+
+# Secrets
+.env
+*.key
+azure_tts.json
