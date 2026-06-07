@@ -10,13 +10,15 @@ tek bir Flutter mobil kabuğunu paylaşır.
 
 | Modül | Ne yapar | Çekirdek teknoloji | Durum |
 |-------|----------|--------------------|-------|
-| **SesVer** | Kameradan işaret dilini canlı okur, konuşmaya çevirir. Ters mod: konuşmayı ekranda işaret animasyonuna çevirir. | MediaPipe (el+yüz landmark) + PyTorch sınıflandırıcı + Azure TTS | 🟡 İskelet |
-| **Duyar** | Arka planda dinler; siren, kapı zili, bebek ağlaması, isim çağrılması gibi kritik sesleri tanıyıp titreşim + bildirimle uyarır. | PyTorch ses sınıflandırma + Flutter background service | 🟢 Çalışan başlangıç |
-| **Yanındayım** | Yaşlılar için tek-buton sesli asistan: diarization ile konuşanı ayırt etme, ilaç hatırlatma, kamerayla ilaç tanıma, çocuklarını arama. | PyTorch diarization + görüntü tanıma + STT/TTS | 🟡 İskelet |
+| **SesVer** | Kameradan işaret dilini canlı okur, konuşmaya çevirir. Ters mod: konuşmayı ekranda işaret animasyonuna çevirir. | MediaPipe (el+yüz landmark) + PyTorch sınıflandırıcı + Azure TTS | 🟡 Kamera demo + pipeline |
+| **Duyar** | Arka planda dinler; siren, kapı zili, bebek ağlaması, isim çağrılması gibi kritik sesleri tanıyıp titreşim + bildirimle uyarır. | PyTorch ses sınıflandırma + Flutter mikrofon/titreşim | 🟢 Uçtan uca çalışıyor (ESC-50 eğitimli) |
+| **Yanındayım** | Yaşlılar için tek-buton sesli asistan: konuşma tanıma, ilaç hatırlatma (bildirim), niyet anlama. | STT + flutter_local_notifications + intent | 🟢 STT + ilaç hatırlatma |
 
 > **Kapsam notu:** Bir ders finali için üç ML-ağır ürünü tam çalışır hale getirmek gerçekçi değil.
-> Bu repoda **Duyar** modülü uçtan uca çalışır (eğitim + çıkarım + API), diğer ikisi mimari
-> + iskelet olarak gösterilir. Bkz. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+> **Duyar** uçtan uca çalışır (ESC-50 gerçek veriyle eğitildi, ~%80 doğruluk). **Yanındayım**
+> konuşma tanıma + ilaç hatırlatma ile çalışır. **SesVer** kamera + landmark pipeline'ı kurulu;
+> gerçek el landmark'ı (ML Kit/MediaPipe) fiziksel cihaz gerektirir (arm64 iOS simülatöründe
+> ML Kit desteklenmez). Bkz. [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
 
 ## Proje yapısı
 

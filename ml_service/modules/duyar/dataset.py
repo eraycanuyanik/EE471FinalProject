@@ -20,9 +20,14 @@ from .wav_io import load_wav
 
 
 class FolderAudioDataset(Dataset):
-    """data/<label>/*.wav yapısından okur."""
+    """data/<label>/*.wav yapısından okur.
 
-    def __init__(self, root: str = "data"):
+    ESC-50 klipleri 5 sn'dir; her örnekte rastgele 1 sn'lik pencere kırparak
+    hem pipeline'ın 1 sn'lik girdisine uyar hem de veri çoğaltma sağlarız.
+    """
+
+    def __init__(self, root: str = "data", random_crop: bool = True):
+        self.random_crop = random_crop
         self.items: list[tuple[Path, int]] = []
         root_path = Path(root)
         for label in LABELS:
@@ -42,7 +47,11 @@ class FolderAudioDataset(Dataset):
         wav, sr = load_wav(str(path))
         if sr != SAMPLE_RATE:
             wav = torchaudio.functional.resample(wav, sr, SAMPLE_RATE)
-        return waveform_to_logmel(wav.mean(dim=0)), y
+        wav = wav.mean(dim=0)  # mono
+        if self.random_crop and wav.shape[-1] > N_SAMPLES:
+            start = int(torch.randint(0, wav.shape[-1] - N_SAMPLES + 1, (1,)).item())
+            wav = wav[start:start + N_SAMPLES]
+        return waveform_to_logmel(wav), y
 
 
 class SyntheticAudioDataset(Dataset):

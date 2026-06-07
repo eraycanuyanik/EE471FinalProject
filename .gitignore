@@ -9,8 +9,10 @@ venv/
 *.pt
 *.pth
 *.onnx
-ml_service/data/*.wav
 ml_service/checkpoints/
+
+# Veri setleri (ESC-50 vb. — repoya konmaz, prepare_esc50.py ile yeniden üretilir)
+ml_service/data/
 
 # Flutter / Dart
 app/.dart_tool/

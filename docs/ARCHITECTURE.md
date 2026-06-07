@@ -73,8 +73,18 @@ GET  /health                                          -> {status, modules}
 
 ## 5. Yol haritası (ders teslimi için gerçekçi)
 1. ✅ Repo iskeleti + ortak servis + Duyar çalışan başlangıç
-2. ⬜ Duyar: gerçek veri seti (ESC-50 / UrbanSound8K + Türkçe isim kayıtları) ile eğitim
-3. ⬜ Duyar ONNX export + Flutter entegrasyonu (mikrofon → titreşim)
-4. ⬜ SesVer: MediaPipe demo + küçük işaret seti (5-10 kelime) sınıflandırıcı
-5. ⬜ Yanındayım: intent + TTS demo
-6. ⬜ Sunum + rapor
+2. ✅ Duyar: gerçek veri seti (ESC-50) ile eğitim → ~%80 doğrulama doğruluğu
+3. ✅ Flutter mobil uygulama: 3 modül + Duyar mikrofon→API→titreşim akışı
+4. ✅ Yanındayım: STT (konuşma→metin) + ilaç hatırlatma (bildirim) + intent
+5. ✅ SesVer: kamera + landmark pipeline iskeleti (ML Kit gerçek cihazda)
+6. ⬜ Duyar 'isim_cagirma' için Türkçe seslenme kayıtları topla
+7. ⬜ Duyar ONNX export → on-device çıkarım
+8. ⬜ SesVer: fiziksel cihazda ML Kit el landmark + TİD sınıflandırıcı
+9. ⬜ Sunum + rapor
+
+### Önemli teknik kısıt: ML Kit & iOS simülatörü
+Google ML Kit iOS pod'ları Apple Silicon **arm64 iOS simülatörünü desteklemez** (yalnızca
+fiziksel cihaz + Intel simülatör). Bu yüzden SesVer'in gerçek el landmark takibi fiziksel
+iPhone gerektirir. Tüm uygulamanın simülatörde çalışabilmesi için ML Kit bağımlılığı
+varsayılan olarak kaldırıldı; eklemek için `app/lib/modules/sesver/sesver_screen.dart`
+başındaki yönergeleri izleyin.

@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
 
+import 'core/notifications.dart';
 import 'core/theme.dart';
 import 'modules/duyar/duyar_screen.dart';
 import 'modules/sesver/sesver_screen.dart';
 import 'modules/yanindayim/yanindayim_screen.dart';
 
-void main() => runApp(const ErisimApp());
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Notifications.init();
+  runApp(const ErisimApp());
+}
 
 class ErisimApp extends StatelessWidget {
   const ErisimApp({super.key});

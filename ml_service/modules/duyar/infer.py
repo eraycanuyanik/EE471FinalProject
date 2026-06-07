@@ -4,7 +4,7 @@ from pathlib import Path
 import torch
 import torchaudio
 
-from .audio import SAMPLE_RATE, waveform_to_logmel
+from .audio import N_SAMPLES, SAMPLE_RATE, waveform_to_logmel
 from .labels import CRITICAL, LABELS
 from .model import build_model
 from .wav_io import load_wav
@@ -32,10 +32,23 @@ def load_model() -> torch.nn.Module:
 
 @torch.no_grad()
 def predict_waveform(wav: torch.Tensor) -> dict:
-    """(samples,) ham ses -> {label, confidence, critical, all_scores}."""
+    """(samples,) ham ses -> {label, confidence, critical, all_scores}.
+
+    1 sn'den uzun ses gelirse 1 sn'lik (yarı örtüşen) pencerelere bölüp
+    softmax çıktısını ortalar — uzun kliplerde tek pencerenin sessiz kısma
+    denk gelmesini önler.
+    """
     model = load_model()
-    feat = waveform_to_logmel(wav).unsqueeze(0)         # (1, 1, mel, T)
-    probs = torch.softmax(model(feat), dim=1).squeeze(0)
+    if wav.dim() > 1:
+        wav = wav.mean(dim=0)
+
+    hop = N_SAMPLES // 2
+    if wav.shape[-1] > int(1.5 * N_SAMPLES):
+        windows = [wav[s:s + N_SAMPLES] for s in range(0, wav.shape[-1] - N_SAMPLES + 1, hop)]
+    else:
+        windows = [wav]
+    feats = torch.stack([waveform_to_logmel(w) for w in windows])  # (W, 1, mel, T)
+    probs = torch.softmax(model(feats), dim=1).mean(dim=0)          # pencere ortalaması
     idx = int(probs.argmax())
     label = LABELS[idx]
     return {

@@ -70,5 +70,7 @@
 	<string>Duyar, çevredeki kritik sesleri (siren, kapı zili, bebek ağlaması) tanıyıp sizi uyarmak için mikrofona erişir.</string>
 	<key>NSCameraUsageDescription</key>
 	<string>SesVer, işaret dilini okuyup konuşmaya çevirmek için kamerayı kullanır.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Yanındayım, komutlarınızı anlamak için konuşmanızı metne çevirir.</string>
 </dict>
 </plist>

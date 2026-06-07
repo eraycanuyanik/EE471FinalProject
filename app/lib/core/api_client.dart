@@ -37,6 +37,18 @@ class ApiClient {
     return DuyarResult.fromJson(jsonDecode(r.body) as Map<String, dynamic>);
   }
 
+  /// SesVer: landmark vektörü gönder, işaret tahmini al (iskelet).
+  Future<Map<String, dynamic>> sesverPredict(List<List<double>> landmarks) async {
+    final r = await http
+        .post(
+          Uri.parse('$baseUrl/sesver/predict'),
+          headers: {'Content-Type': 'application/json'},
+          body: jsonEncode({'landmarks': landmarks}),
+        )
+        .timeout(const Duration(seconds: 10));
+    return jsonDecode(r.body) as Map<String, dynamic>;
+  }
+
   /// Yanındayım: metinden niyet çıkar (iskelet).
   Future<Map<String, dynamic>> yanindayimIntent(String text) async {
     final r = await http.post(
