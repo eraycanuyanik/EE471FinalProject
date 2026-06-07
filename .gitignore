@@ -28,3 +28,7 @@ app/ios/Pods/
 .env
 *.key
 azure_tts.json
+
+# Flutter build çıktıları (app/.gitignore zaten var, garanti olsun)
+app/.dart_tool/
+app/build/
