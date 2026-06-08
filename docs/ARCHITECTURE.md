@@ -44,12 +44,15 @@ vizyonu teknik olarak da gerçekleşir.
 ## 3. Modül detayları
 
 ### Duyar (çalışan) — ses sınıflandırma
-- **Girdi:** 1 sn'lik mono 16 kHz ses penceresi.
-- **Özellik:** log-mel spektrogram (64 mel, 16 kHz).
-- **Model:** küçük 2D CNN → softmax (`modules/duyar/model.py`).
-- **Sınıflar:** siren, kapı_zili, bebek_ağlaması, alarm, kapı_vurma, isim_çağırma, köpek, sessizlik (`labels.py`).
-- **Çıktı:** sınıf + güven skoru → telefon titreşim/bildirim.
-- **Türkçe boşluk:** "isim_çağırma" ve sözel uyarı ("dikkat!") tanıma yerelde eksik — projenin katma değeri.
+- **Model:** önceden eğitilmiş **PANNs CNN14** (Google AudioSet, 527 ses sınıfı) — `modules/duyar/panns_infer.py`.
+- **Neden hazır model:** sıfırdan küçük CNN (önceki `model.py`) sadece ~280 ESC-50 klibiyle eğitildiği için
+  gerçek mikrofonda zayıftı ve **konuşmayı bile kritik ses sanıyordu** (konuşma sınıfı yoktu).
+  PANNs "Speech"i ayrı bir AudioSet sınıfı olarak bildiğinden normal konuşma kritik sayılmaz.
+- **Eşleme:** AudioSet olasılıkları Duyar etiketlerine indirgenir (siren, kapı_zili, bebek_ağlaması,
+  alarm, kapı_vurma, köpek, isim_çağırma). Eşik altı → `konusma` / `diger` / `sessizlik` (kritik değil).
+- **Doğrulama:** hedef seslerde ~%87 doğru sınıf; konuşma/kahkaha/ortam seslerinde **0 yanlış alarm**.
+- **Çıktı:** etiket + kalibre güven + `critical` bayrağı → telefonda türe özel titreşim.
+- **Not:** Eski sıfırdan CNN (`model.py`, `train.py`, ESC-50 eğitimi) referans/karşılaştırma için repoda kalıyor.
 
 ### SesVer (iskelet) — işaret dili → konuşma
 - MediaPipe Hands + FaceMesh → her frame için landmark vektörü.

@@ -84,7 +84,9 @@ class DuyarResult {
 
   /// Sınıf adını kullanıcıya gösterilecek Türkçe etikete çevirir.
   String get displayName => const {
-        'sessizlik': 'Sessizlik',
+        'sessizlik': '🔇 Sessizlik',
+        'diger': '🎵 Ortam sesi',
+        'konusma': '🗣️ Konuşma',
         'siren': '🚨 Siren',
         'kapi_zili': '🔔 Kapı zili',
         'bebek_aglamasi': '👶 Bebek ağlaması',

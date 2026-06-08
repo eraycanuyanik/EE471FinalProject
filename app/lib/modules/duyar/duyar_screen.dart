@@ -37,6 +37,11 @@ class _DuyarScreenState extends State<DuyarScreen> with SingleTickerProviderStat
   bool _flash = false;
   final List<_Detection> _history = [];
 
+  // Aynı kritik sesi kısa sürede tekrar titretmemek için debounce
+  String? _lastAlertLabel;
+  DateTime _lastAlertTime = DateTime.fromMillisecondsSinceEpoch(0);
+  static const _cooldown = Duration(seconds: 3);
+
   // Kritik seslere özel titreşim desenleri
   static const _patterns = <String, List<int>>{
     'siren': [0, 500, 180, 500, 180, 500],
@@ -117,8 +122,15 @@ class _DuyarScreenState extends State<DuyarScreen> with SingleTickerProviderStat
       if (!mounted) return;
       setState(() => _current = result);
 
-      if (result.critical && result.confidence > 0.55) {
-        _onCritical(result);
+      if (result.critical) {
+        final now = DateTime.now();
+        final sameRecent = result.label == _lastAlertLabel &&
+            now.difference(_lastAlertTime) < _cooldown;
+        if (!sameRecent) {
+          _lastAlertLabel = result.label;
+          _lastAlertTime = now;
+          _onCritical(result);
+        }
       }
     } catch (e) {
       if (mounted) setState(() => _status = 'Bağlantı bekleniyor…');

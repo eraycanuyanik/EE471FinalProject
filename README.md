@@ -11,7 +11,7 @@ tek bir Flutter mobil kabuğunu paylaşır.
 | Modül | Ne yapar | Çekirdek teknoloji | Durum |
 |-------|----------|--------------------|-------|
 | **SesVer** | Kameradan işaret dilini canlı okur, konuşmaya çevirir. Ters mod: konuşmayı ekranda işaret animasyonuna çevirir. | MediaPipe (el+yüz landmark) + PyTorch sınıflandırıcı + Azure TTS | 🟡 Kamera demo + pipeline |
-| **Duyar** | Arka planda dinler; siren, kapı zili, bebek ağlaması, isim çağrılması gibi kritik sesleri tanıyıp titreşim + bildirimle uyarır. | PyTorch ses sınıflandırma + Flutter mikrofon/titreşim | 🟢 Uçtan uca çalışıyor (ESC-50 eğitimli) |
+| **Duyar** | Sürekli dinler; siren, kapı zili, bebek ağlaması, alarm gibi kritik sesleri tanıyıp türüne özel titreşimle uyarır. Konuşmayı/ortam sesini ayırt eder. | PANNs (AudioSet, 527 sınıf) + Flutter mikrofon/titreşim | 🟢 Uçtan uca çalışıyor |
 | **Yanındayım** | Yaşlılar için tek-buton sesli asistan: konuşma tanıma, ilaç hatırlatma (bildirim), niyet anlama. | STT + flutter_local_notifications + intent | 🟢 STT + ilaç hatırlatma |
 
 > **Kapsam notu:** Bir ders finali için üç ML-ağır ürünü tam çalışır hale getirmek gerçekçi değil.
