@@ -1,23 +1,17 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:google_mlkit_pose_detection/google_mlkit_pose_detection.dart';
 
-import '../../core/api_client.dart';
+import '../../core/tts.dart';
 
-/// SesVer — işaret dili → konuşma demo'su (kamera tabanlı pipeline).
+/// SesVer — kamera + ML Kit vücut/el takibi ile basit hareketleri tanıyıp
+/// sesli söyler (gerçek cihazda çalışır; simülatörde kamera yoktur).
 ///
-/// Kamera önizlemesini açar ve düzenli aralıklarla kare yakalayıp landmark
-/// pipeline'ını ml_service /sesver/predict'e bağlar.
-///
-/// EL LANDMARK TAKİBİ (MediaPipe/ML Kit) NEREDE?
-/// Google ML Kit Pose/Hand, Apple Silicon arm64 iOS SİMÜLATÖRÜNÜ desteklemez
-/// (yalnızca fiziksel cihaz). Bu yüzden simülatörde çalışabilmek için ML Kit
-/// bağımlılığı kaldırıldı. Gerçek cihazda el landmark'ı eklemek için:
-///   1) pubspec'e google_mlkit_pose_detection ekle
-///   2) PoseDetector ile bu ekranda yakalanan kareyi işle
-///   3) pose.landmarks (bilek/parmak) -> _sendLandmarks(vector)
-/// Bkz. docs/ARCHITECTURE.md → SesVer.
+/// Tam Türk İşaret Dili çevirisi araştırma seviyesindedir; bu modül hareket
+/// seviyesinde bir demodur: el kaldır → "Merhaba", iki el yukarı → "İmdat" vb.
 class SesVerScreen extends StatefulWidget {
   const SesVerScreen({super.key});
 
@@ -26,13 +20,18 @@ class SesVerScreen extends StatefulWidget {
 }
 
 class _SesVerScreenState extends State<SesVerScreen> {
-  final _api = ApiClient();
   CameraController? _camera;
-  Timer? _loop;
+  final _detector = PoseDetector(options: PoseDetectorOptions());
   bool _busy = false;
+
   String _status = 'Başlatılıyor…';
-  int _frames = 0;
-  String _gloss = '';
+  int _points = 0;
+  String _phrase = '';
+
+  // hareket kararlılığı / tekrar konuşmayı önleme
+  String _candidate = '';
+  int _candidateCount = 0;
+  String _lastSpoken = '';
 
   @override
   void initState() {
@@ -40,57 +39,132 @@ class _SesVerScreenState extends State<SesVerScreen> {
     _initCamera();
   }
 
+  @override
+  void dispose() {
+    _camera?.stopImageStream().catchError((_) {});
+    _camera?.dispose();
+    _detector.close();
+    super.dispose();
+  }
+
   Future<void> _initCamera() async {
     try {
       final cameras = await availableCameras();
       if (cameras.isEmpty) {
-        setState(() => _status =
-            'Kamera bulunamadı.\nSesVer kamera gerektirir — iOS simülatöründe kamera yoktur, gerçek cihazda çalışır.');
+        setState(() => _status = 'Kamera yok (gerçek cihaz gerekir)');
         return;
       }
       final front = cameras.firstWhere(
         (c) => c.lensDirection == CameraLensDirection.front,
         orElse: () => cameras.first,
       );
-      final controller = CameraController(front, ResolutionPreset.medium, enableAudio: false);
-      await controller.initialize();
+      final c = CameraController(
+        front,
+        ResolutionPreset.medium,
+        enableAudio: false,
+        imageFormatGroup: ImageFormatGroup.bgra8888,
+      );
+      await c.initialize();
       if (!mounted) return;
       setState(() {
-        _camera = controller;
-        _status = 'Landmark pipeline açık';
+        _camera = c;
+        _status = 'Hareketini göster';
       });
-      _loop = Timer.periodic(const Duration(milliseconds: 900), (_) => _processFrame());
+      await c.startImageStream(_onFrame);
     } catch (e) {
       setState(() => _status = 'Kamera hatası: $e');
     }
   }
 
-  Future<void> _processFrame() async {
-    final cam = _camera;
-    if (cam == null || _busy || !cam.value.isInitialized) return;
+  Future<void> _onFrame(CameraImage image) async {
+    if (_busy) return;
     _busy = true;
     try {
-      // Gerçek cihazda: burada yakalanan kareden ML Kit ile landmark çıkarılır.
-      // Şimdilik pipeline'ı doğrulamak için kare sayısından türetilmiş bir
-      // sözde-landmark vektörü gönderiyoruz.
-      _frames++;
-      final vector = [
-        [(_frames % 5).toDouble(), (_frames % 3).toDouble()],
-      ];
-      final r = await _api.sesverPredict(vector);
-      if (mounted) setState(() => _gloss = (r['sentence'] as String?) ?? '');
+      final input = _toInputImage(image);
+      if (input == null) return;
+      final poses = await _detector.processImage(input);
+      if (poses.isEmpty) {
+        if (mounted) setState(() => _points = 0);
+        _onGesture('');
+        return;
+      }
+      final pose = poses.first;
+      final n = pose.landmarks.values.where((l) => l.likelihood > 0.5).length;
+      if (mounted) setState(() => _points = n);
+      _onGesture(_detectGesture(pose));
     } catch (_) {
-      // tek kare hatasını yut
     } finally {
       _busy = false;
     }
   }
 
-  @override
-  void dispose() {
-    _loop?.cancel();
-    _camera?.dispose();
-    super.dispose();
+  InputImage? _toInputImage(CameraImage image) {
+    final cam = _camera;
+    if (cam == null) return null;
+    final rotation = InputImageRotationValue.fromRawValue(cam.description.sensorOrientation);
+    final format = InputImageFormatValue.fromRawValue(image.format.raw);
+    if (rotation == null || format == null) return null;
+    if (Platform.isIOS && format != InputImageFormat.bgra8888) return null;
+    if (image.planes.length != 1) return null;
+    final plane = image.planes.first;
+    return InputImage.fromBytes(
+      bytes: plane.bytes,
+      metadata: InputImageMetadata(
+        size: Size(image.width.toDouble(), image.height.toDouble()),
+        rotation: rotation,
+        format: format,
+        bytesPerRow: plane.bytesPerRow,
+      ),
+    );
+  }
+
+  /// Pose landmark'larından basit hareketleri çıkarır. (y küçükse = yukarıda)
+  String _detectGesture(Pose pose) {
+    PoseLandmark? lm(PoseLandmarkType t) {
+      final l = pose.landmarks[t];
+      return (l != null && l.likelihood > 0.5) ? l : null;
+    }
+
+    final nose = lm(PoseLandmarkType.nose);
+    final ls = lm(PoseLandmarkType.leftShoulder);
+    final rs = lm(PoseLandmarkType.rightShoulder);
+    final lw = lm(PoseLandmarkType.leftWrist);
+    final rw = lm(PoseLandmarkType.rightWrist);
+
+    if (nose != null && lw != null && rw != null && lw.y < nose.y && rw.y < nose.y) {
+      return 'İmdat! Yardım edin';
+    }
+    if ((lw != null && ls != null && lw.y < ls.y) ||
+        (rw != null && rs != null && rw.y < rs.y)) {
+      return 'Merhaba';
+    }
+    if (lw != null && rw != null && ls != null && rs != null) {
+      final shoulderY = (ls.y + rs.y) / 2;
+      final shoulderW = (ls.x - rs.x).abs();
+      if (lw.y > shoulderY && rw.y > shoulderY && (lw.x - rw.x).abs() < shoulderW * 0.6) {
+        return 'Teşekkür ederim';
+      }
+    }
+    return '';
+  }
+
+  void _onGesture(String g) {
+    if (g == _candidate) {
+      _candidateCount++;
+    } else {
+      _candidate = g;
+      _candidateCount = 1;
+    }
+    if (g.isEmpty) {
+      _lastSpoken = ''; // hareket bitince aynı hareket tekrar tetiklenebilsin
+      return;
+    }
+    // aynı hareket 3 kare üst üste + daha önce söylenmediyse seslendir
+    if (_candidateCount >= 3 && g != _lastSpoken) {
+      _lastSpoken = g;
+      if (mounted) setState(() => _phrase = g);
+      Tts.speak(g);
+    }
   }
 
   @override
@@ -106,16 +180,13 @@ class _SesVerScreenState extends State<SesVerScreen> {
                 : Center(
                     child: Padding(
                       padding: const EdgeInsets.all(24),
-                      child: Column(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.videocam_off, size: 80, color: Colors.grey),
-                          const SizedBox(height: 16),
-                          Text(_status,
-                              textAlign: TextAlign.center,
-                              style: Theme.of(context).textTheme.bodyLarge),
-                        ],
-                      ),
+                      child: Column(mainAxisSize: MainAxisSize.min, children: [
+                        const Icon(Icons.videocam_off, size: 80, color: Colors.grey),
+                        const SizedBox(height: 16),
+                        Text(_status,
+                            textAlign: TextAlign.center,
+                            style: Theme.of(context).textTheme.bodyLarge),
+                      ]),
                     ),
                   ),
           ),
@@ -123,14 +194,16 @@ class _SesVerScreenState extends State<SesVerScreen> {
             width: double.infinity,
             padding: const EdgeInsets.all(20),
             color: Theme.of(context).colorScheme.surfaceContainerHighest,
-            child: Column(
-              children: [
-                Text('İşlenen kare: $_frames', style: const TextStyle(fontSize: 18)),
-                const SizedBox(height: 8),
-                Text(_gloss.isEmpty ? '—' : _gloss,
-                    style: Theme.of(context).textTheme.headlineMedium),
-              ],
-            ),
+            child: Column(children: [
+              Text('Algılanan nokta: $_points',
+                  style: const TextStyle(fontSize: 16, color: Colors.black54)),
+              const SizedBox(height: 8),
+              Text(_phrase.isEmpty ? '—' : _phrase,
+                  style: Theme.of(context).textTheme.headlineMedium, textAlign: TextAlign.center),
+              const SizedBox(height: 8),
+              const Text('Dene: el kaldır · iki el yukarı · iki el göğüste',
+                  style: TextStyle(fontSize: 13, color: Colors.black45)),
+            ]),
           ),
         ],
       ),
