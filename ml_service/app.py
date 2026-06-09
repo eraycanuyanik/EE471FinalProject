@@ -72,8 +72,13 @@ def duyar_predict(req: DuyarRequest):
 
     # boş / çok kısa ses -> sessizlik (çökme yerine güvenli yanıt)
     if wav is None or wav.numel() < 1600:
+        print(f"[duyar] KISA/BOŞ ses: numel={0 if wav is None else wav.numel()} sr={sr}", flush=True)
         return _SILENT
-    return predict_waveform(wav, sr)
+    maxamp = float(wav.abs().max())
+    print(f"[duyar] gelen ses: numel={wav.numel()} sr={sr} maxamp={maxamp:.4f}", flush=True)
+    result = predict_waveform(wav, sr)
+    print(f"[duyar] sonuc: {result['label']} %{int(result['confidence']*100)} kritik={result['critical']}", flush=True)
+    return result
 
 
 @app.get("/duyar/labels")

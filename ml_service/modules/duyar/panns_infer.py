@@ -75,6 +75,9 @@ def predict_waveform(wav: torch.Tensor, sr: int) -> dict:
         return {"label": "sessizlik", "confidence": 1.0, "critical": False, "all_scores": {}}
     if sr != PANNS_SR:
         wav = torchaudio.functional.resample(wav, sr, PANNS_SR)
+    # CNN için çok kısa kliplerde (mel çok az kare) çökmeyi önle: en az 1 sn'ye doldur
+    if wav.numel() < PANNS_SR:
+        wav = torch.nn.functional.pad(wav, (0, PANNS_SR - wav.numel()))
 
     audio = wav.unsqueeze(0).cpu().numpy().astype(np.float32)  # (1, samples)
     clipwise, _ = _model.inference(audio)
