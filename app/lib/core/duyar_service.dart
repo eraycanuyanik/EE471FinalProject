@@ -4,6 +4,7 @@ import 'dart:math';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:record/record.dart';
 import 'package:vibration/vibration.dart';
 
@@ -137,12 +138,24 @@ class DuyarService {
 
   Future<void> _onCritical(DuyarResult r) async {
     history.value = [DuyarDetection(r.displayName, DateTime.now()), ...history.value].take(10).toList();
-    final pattern = _patterns[r.label] ?? [0, 400, 200, 400];
-    if (await Vibration.hasVibrator()) {
-      Vibration.vibrate(pattern: pattern);
-    }
+    _buzz(r.label);
     // Ekran kapalı / başka uygulamadaysa görmek için bildirim
     await Notifications.showNow('${r.displayName} algılandı', 'Duyar kritik bir ses tespit etti');
+  }
+
+  /// iOS'ta hissedilir titreşim: hasVibrator kontrolü YOK (iOS'ta false dönebilir).
+  /// Önce titreşim paketi (Android desen + iOS Core Haptics), sonra her ihtimale
+  /// karşı tekrarlı güçlü Taptic haptiği.
+  Future<void> _buzz(String label) async {
+    final pattern = _patterns[label] ?? [0, 400, 200, 400];
+    try {
+      await Vibration.vibrate(pattern: pattern);
+    } catch (_) {}
+    // iPhone Taptic Engine: belirgin, art arda darbeler
+    for (var i = 0; i < 6; i++) {
+      await HapticFeedback.heavyImpact();
+      await Future.delayed(const Duration(milliseconds: 150));
+    }
   }
 
   Uint8List _pcm16ToWav(Uint8List pcm, int sampleRate) {
