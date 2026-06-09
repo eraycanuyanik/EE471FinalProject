@@ -11,10 +11,16 @@ class ApiClient {
 
   final String baseUrl;
 
+  // Mac'in yerel ağ (Wi-Fi) IP'si. Fiziksel iPhone bu adresten ML servisine
+  // ulaşır (telefon + Mac aynı Wi-Fi'da olmalı). Ağ değişirse güncelle:
+  //   ipconfig getifaddr en0
+  static const macLanIp = '192.168.1.105';
+
   static String _defaultBaseUrl() {
     // Android emülatörü host makineyi 10.0.2.2 üzerinden görür.
     if (Platform.isAndroid) return 'http://10.0.2.2:8000';
-    return 'http://127.0.0.1:8000';
+    // iOS (fiziksel cihaz + simülatör): Mac'in LAN IP'si.
+    return 'http://$macLanIp:8000';
   }
 
   Future<Map<String, dynamic>> health() async {

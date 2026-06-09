@@ -72,5 +72,14 @@
 	<string>SesVer, işaret dilini okuyup konuşmaya çevirmek için kamerayı kullanır.</string>
 	<key>NSSpeechRecognitionUsageDescription</key>
 	<string>Yanındayım, komutlarınızı anlamak için konuşmanızı metne çevirir.</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+		<key>NSAllowsLocalNetworking</key>
+		<true/>
+	</dict>
+	<key>NSLocalNetworkUsageDescription</key>
+	<string>Duyar, aynı Wi-Fi'daki ses tanıma sunucusuna bağlanmak için yerel ağı kullanır.</string>
 </dict>
 </plist>
