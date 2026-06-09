@@ -4,8 +4,12 @@
     uvicorn app:app --reload
 """
 import base64
+import io
 from contextlib import asynccontextmanager
 
+import numpy as np
+import soundfile as sf
+import torch
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
@@ -43,13 +47,32 @@ class DuyarRequest(BaseModel):
     audio_b64: str  # base64 ile kodlanmış WAV
 
 
+_SILENT = {"label": "sessizlik", "confidence": 1.0, "critical": False, "all_scores": {}}
+
+
 @app.post("/duyar/predict")
 def duyar_predict(req: DuyarRequest):
     try:
         raw = base64.b64decode(req.audio_b64)
-        wav, sr = load_wav(raw)
     except Exception as e:
-        raise HTTPException(400, f"Ses çözülemedi: {e}")
+        raise HTTPException(400, f"base64 çözülemedi: {e}")
+
+    # soundfile iOS dahil farklı WAV biçimlerini sağlam çözer; olmazsa stdlib wave.
+    wav = None
+    try:
+        data, sr = sf.read(io.BytesIO(raw), dtype="float32")
+        if data.ndim > 1:
+            data = data.mean(axis=1)
+        wav = torch.from_numpy(np.ascontiguousarray(data))
+    except Exception:
+        try:
+            wav, sr = load_wav(raw)
+        except Exception as e:
+            raise HTTPException(400, f"Ses çözülemedi: {e}")
+
+    # boş / çok kısa ses -> sessizlik (çökme yerine güvenli yanıt)
+    if wav is None or wav.numel() < 1600:
+        return _SILENT
     return predict_waveform(wav, sr)
 
 

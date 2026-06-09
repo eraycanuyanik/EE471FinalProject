@@ -71,6 +71,8 @@ def predict_waveform(wav: torch.Tensor, sr: int) -> dict:
     load_model()
     if wav.dim() > 1:
         wav = wav.mean(dim=0)
+    if wav.numel() < 800:  # neredeyse boş ses -> güvenli yanıt
+        return {"label": "sessizlik", "confidence": 1.0, "critical": False, "all_scores": {}}
     if sr != PANNS_SR:
         wav = torchaudio.functional.resample(wav, sr, PANNS_SR)
 
