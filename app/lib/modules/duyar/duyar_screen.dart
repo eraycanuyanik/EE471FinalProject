@@ -133,7 +133,7 @@ class _DuyarScreenState extends State<DuyarScreen> with SingleTickerProviderStat
         }
       }
     } catch (e) {
-      if (mounted) setState(() => _status = 'Bağlantı bekleniyor…');
+      if (mounted) setState(() => _status = 'Sunucuya bağlanılamadı');
     }
   }
 
@@ -168,6 +168,9 @@ class _DuyarScreenState extends State<DuyarScreen> with SingleTickerProviderStat
             _currentCard(),
             const Spacer(),
             _historyStrip(),
+            Text('Sunucu: ${_api.baseUrl}',
+                style: const TextStyle(color: Colors.white38, fontSize: 12)),
+            const SizedBox(height: 4),
             _controlBar(),
           ],
         ),

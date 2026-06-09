@@ -81,5 +81,9 @@
 	</dict>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>Duyar, aynı Wi-Fi'daki ses tanıma sunucusuna bağlanmak için yerel ağı kullanır.</string>
+	<key>LSApplicationQueriesSchemes</key>
+	<array>
+		<string>tel</string>
+	</array>
 </dict>
 </plist>

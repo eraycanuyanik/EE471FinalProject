@@ -5,7 +5,10 @@ import 'medication.dart';
 
 /// İlaç hatırlatma ekranı — ilaç ekle, listele, günlük bildirim kur.
 class MedicationScreen extends StatefulWidget {
-  const MedicationScreen({super.key});
+  const MedicationScreen({super.key, this.openAddOnStart = false});
+
+  /// Sesle "ilaç ekle" denince ekran açılır açılmaz ekleme penceresini aç.
+  final bool openAddOnStart;
 
   @override
   State<MedicationScreen> createState() => _MedicationScreenState();
@@ -19,6 +22,9 @@ class _MedicationScreenState extends State<MedicationScreen> {
   void initState() {
     super.initState();
     _load();
+    if (widget.openAddOnStart) {
+      WidgetsBinding.instance.addPostFrameCallback((_) => _addMedication());
+    }
   }
 
   Future<void> _load() async {
